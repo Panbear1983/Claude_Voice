@@ -68,7 +68,7 @@ Each step is one small Python file:
 | Think | `brain.py` | Runs `claude -p --resume <thread>` with a short instruction to *answer like a phone call*: one to four spoken sentences, with no code, paths or links. Long detail goes to a file instead. A file lock lets the Mac and the phone take turns on one thread. |
 | Speak | `tts.py` | Strips markdown, picks an English or Mandarin voice, and plays the answer in a way that can be cut off instantly. |
 | Loop | `engine.py`, `app.py` | Runs the cycle, spoken commands and sleep/wake. A [Textual](https://textual.textualize.io) window draws the light, meter and transcript. |
-| Phone | `receiver.py` | A tiny token-protected web endpoint, `POST /ask {"text"} → {"reply"}`, that the iPhone Shortcut calls. |
+| Phone | `receiver.py` | A tiny token-protected web endpoint the iPhone Shortcut calls: `POST /ask` takes the question and answers within 8 s if it can; `GET /reply` hands out each finished answer exactly once, so the phone can check back on a fixed schedule and never keeps Siri waiting. |
 
 **Measured on a 24 GB Apple Silicon Mac:** speech to text 1.2–1.6 s, a simple Claude turn
 4–11 s, a turn that digs through files about 20 s, voice synthesis 2.7–4 s.
@@ -138,6 +138,12 @@ Get the `.shortcut` file onto the phone (AirDrop, iCloud Drive, or send it to yo
 and tap **Add Shortcut**. Then say **"Hey Siri, Talk to Claude"**. It listens, sends what
 you said when you pause, reads the reply aloud and listens again, for up to 300 rounds.
 
+Siri drops any request that takes more than about ten seconds, and a Claude turn can take
+twenty or more, so the phone never waits for a whole turn: the Mac takes the question at
+once and the Shortcut checks back every few seconds, saying "still running a command"
+while it waits, then speaks the answer the moment it is ready. Rebuild the Shortcut and
+re-add it whenever you change the receiver.
+
 Prefer typing on the phone? `./install_remote_control.sh` keeps a Claude Code Remote
 Control session running on the Mac, so the Claude app on your phone always finds it.
 
@@ -201,7 +207,7 @@ Nothing personal lives in the repo. The app's memory is `~/.claude_voice/`:
 | "already open in another window" | only one window at a time; close the other |
 | Light stuck on *hearing you* | room too loud for open mic; press <kbd>M</kbd> for tap mode |
 | It answers things you didn't say | something else on the Mac is talking; mute it or use tap mode |
-| iPhone Shortcut fails | Tailscale off on the phone, the receiver isn't running (`curl http://<mac-tailscale-ip>:8765/health`), or a very long turn outlasted the Shortcut's wait |
+| Siri says "something went wrong" | Tailscale off on the phone, or the receiver isn't running (`curl http://<mac-tailscale-ip>:8765/health`); `~/.claude_voice/receiver.log` has one line per request. An old Shortcut built before the check-back design times out on long answers: rebuild and re-add it |
 | A new conversation started by itself | you opened the voice thread in another `claude --resume` window and left it open; read it, then quit |
 | Slow to start speaking | your `TTS_ORDER` tries a voice that keeps failing first; reorder it |
 

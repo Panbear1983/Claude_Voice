@@ -1,7 +1,7 @@
 """Build the iPhone side: a signed "Talk to Claude" Shortcut file.
 
-The shortcut loops: dictate (stops on a pause) -> POST to the Mac receiver -> speak the
-reply -> repeat. Open the produced file once on the Mac (Shortcuts asks "Add Shortcut");
+The shortcut loops: dictate (stops on a pause) -> POST to the Mac receiver -> speak what
+came back -> check back every ~8 s and speak the answer when it is ready -> repeat. Open the produced file once on the Mac (Shortcuts asks "Add Shortcut");
 iCloud then syncs it to the iPhone.
 
   .venv/bin/python make_shortcut.py            # writes 'Talk to Claude.shortcut' here + ~/Desktop/Misc
@@ -24,7 +24,8 @@ TAILSCALE_IP = os.environ.get("CLAUDE_VOICE_MAC_IP") or (
     subprocess.run([TAILSCALE, "ip", "-4"], capture_output=True, text=True).stdout.strip().splitlines() or [""])[0]
 if not TAILSCALE_IP:
     sys.exit("No Tailscale address found. Install Tailscale and sign in, or set CLAUDE_VOICE_MAC_IP.")
-URL = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/ask"
+URL_ASK = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/ask"
+URL_REPLY = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/reply"
 TOKEN = S.RECEIVER_TOKEN_FILE.read_text().strip()
 
 
@@ -45,23 +46,23 @@ def dictionary(items: list[tuple[str, dict]]) -> dict:
         "WFSerializationType": "WFDictionaryFieldValue"}
 
 
-def build() -> dict:
-    group = str(uuid.uuid4())
-    dictate_uuid = str(uuid.uuid4())
-    url_uuid = str(uuid.uuid4())
+POLLS = 12             # after each question: up to 12 check-backs of ~8 s = ~100 s for a long answer;
+                       # once the answer is spoken the remaining check-backs return instantly
+
+
+def url_action(uid: str, method: str, body: dict | None = None) -> dict:
+    params = {"UUID": uid, "WFURL": URL_ASK if method == "POST" else URL_REPLY, "WFHTTPMethod": method,
+              "ShowHeaders": True, "WFHTTPHeaders": dictionary([("X-Token", text(TOKEN))])}
+    if body:
+        params["WFHTTPBodyType"] = "JSON"
+        params["WFJSONValues"] = dictionary(list(body.items()))
+    return {"WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl", "WFWorkflowActionParameters": params}
+
+
+def speak_reply(url_uuid: str) -> list[dict]:
+    """Get Dictionary Value 'reply' from the last URL result, then Speak Text."""
     value_uuid = str(uuid.uuid4())
-    actions = [
-        {"WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
-         "WFWorkflowActionParameters": {"GroupingIdentifier": group, "WFControlFlowMode": 0, "WFRepeatCount": REPEATS}},
-        {"WFWorkflowActionIdentifier": "is.workflow.actions.dictatetext",
-         "WFWorkflowActionParameters": {"UUID": dictate_uuid, "WFDictateTextStopListening": "After Pause"}},
-        {"WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
-         "WFWorkflowActionParameters": {
-             "UUID": url_uuid, "WFURL": URL, "WFHTTPMethod": "POST", "WFHTTPBodyType": "JSON",
-             "ShowHeaders": True,
-             "WFHTTPHeaders": dictionary([("X-Token", text(TOKEN))]),
-             "WFJSONValues": dictionary([("text", ref(dictate_uuid, "Dictated Text"))]),
-         }},
+    return [
         {"WFWorkflowActionIdentifier": "is.workflow.actions.getvalueforkey",
          "WFWorkflowActionParameters": {"UUID": value_uuid, "WFGetDictionaryValueType": "Value",
                                         "WFDictionaryKey": "reply",
@@ -71,9 +72,32 @@ def build() -> dict:
         {"WFWorkflowActionIdentifier": "is.workflow.actions.speaktext",
          "WFWorkflowActionParameters": {"WFSpeakTextWait": True,
                                         "WFText": ref(value_uuid, "Dictionary Value")}},
-        {"WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
-         "WFWorkflowActionParameters": {"GroupingIdentifier": group, "WFControlFlowMode": 2}},
     ]
+
+
+def build() -> dict:
+    """One round = dictate -> POST /ask -> speak -> (GET /reply -> speak) x POLLS.
+
+    Siri drops any single request that takes much longer than ten seconds, so the Mac
+    answers /ask at once and the phone checks back; every check-back speaks whatever came
+    back ("." is silent), so no conditional logic is needed in the Shortcut."""
+    group = str(uuid.uuid4())
+    dictate_uuid = str(uuid.uuid4())
+    ask_uuid = str(uuid.uuid4())
+    actions = [
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+         "WFWorkflowActionParameters": {"GroupingIdentifier": group, "WFControlFlowMode": 0, "WFRepeatCount": REPEATS}},
+        {"WFWorkflowActionIdentifier": "is.workflow.actions.dictatetext",
+         "WFWorkflowActionParameters": {"UUID": dictate_uuid, "WFDictateTextStopListening": "After Pause"}},
+        url_action(ask_uuid, "POST", {"text": ref(dictate_uuid, "Dictated Text")}),
+        *speak_reply(ask_uuid),
+    ]
+    for _ in range(POLLS):
+        poll_uuid = str(uuid.uuid4())
+        actions.append(url_action(poll_uuid, "GET"))
+        actions.extend(speak_reply(poll_uuid))
+    actions.append({"WFWorkflowActionIdentifier": "is.workflow.actions.repeat.count",
+                    "WFWorkflowActionParameters": {"GroupingIdentifier": group, "WFControlFlowMode": 2}})
     return {
         "WFWorkflowClientVersion": "2605.0.5",
         "WFWorkflowMinimumClientVersion": 900,
@@ -103,7 +127,7 @@ def main() -> None:
     misc = Path.home() / "Desktop/Misc"
     if misc.is_dir():
         shutil.copy(signed, misc / signed.name)
-    print(f"built {signed}  (receiver {URL})")
+    print(f"built {signed}  (receiver {URL_ASK}, {POLLS} check-backs per question)")
 
 
 if __name__ == "__main__":

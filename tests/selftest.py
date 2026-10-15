@@ -5,7 +5,8 @@
 
 Stages: 1 silence detector on synthetic audio, 2 whisper-server transcription of a spoken
 clip, 3 English + Mandarin voices, 4 two Claude turns on one thread (memory check),
-5 the window mounts headlessly with the loop stubbed out.
+5 the phone receiver's check-back polling with a stand-in brain, 6 the window mounts
+headlessly with the loop stubbed out.
 """
 from __future__ import annotations
 
@@ -110,6 +111,46 @@ def stage_brain() -> None:
 
 
 # 5 ---------------------------------------------------------------------------------------------
+def stage_receiver() -> None:
+    """The phone door, with a stand-in brain: a slow answer must come back through the
+    check-back polls exactly once, and idle polls must answer at once."""
+    import json
+    import threading
+    import urllib.error
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+
+    import receiver
+    receiver.ASK_WAIT_SEC = receiver.POLL_WAIT_SEC = 1.5
+    receiver.log = lambda m: None
+    receiver.brain.ask = lambda text, **kw: (time.sleep(3), f"**Answer** to {text}")[1]
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), receiver.Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    port = srv.server_address[1]
+
+    def call(method: str, path: str, body: dict | None = None) -> tuple[str, float]:
+        req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method=method,
+                                     headers={"X-Token": receiver.TOKEN, "Content-Type": "application/json"},
+                                     data=json.dumps(body).encode() if body else None)
+        t0 = time.monotonic()
+        return json.loads(urllib.request.urlopen(req, timeout=20).read())["reply"], time.monotonic() - t0
+
+    first, _ = call("POST", "/ask", {"text": "slow question"})
+    polls = [call("GET", "/reply") for _ in range(4)]
+    replies = [r for r, _ in polls]
+    report("receiver: slow answer arrives via check-back, once",
+           first == "." and replies.count("Answer to slow question") == 1, str(replies))
+    after = polls[replies.index("Answer to slow question") + 1:] if "Answer to slow question" in replies else []
+    report("receiver: idle check-backs answer at once", bool(after) and all(t < 0.5 for _, t in after))
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"http://127.0.0.1:{port}/reply"))
+        report("receiver: rejects a missing token", False)
+    except urllib.error.HTTPError as exc:
+        report("receiver: rejects a missing token", exc.code == 403)
+    srv.shutdown()
+
+
+# 6 ---------------------------------------------------------------------------------------------
 def stage_window() -> None:
     import engine
     engine.Engine.start = lambda self: None          # no mic, no whisper in the test
@@ -146,6 +187,7 @@ if __name__ == "__main__":
     stage_tts()
     if "--no-brain" not in sys.argv:
         stage_brain()
+    stage_receiver()
     stage_window()
     print("ALL PASS" if ok else "SOME FAILED")
     sys.exit(0 if ok else 1)
