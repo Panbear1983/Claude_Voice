@@ -5,7 +5,10 @@ set -u
 cd "$(dirname "$0")" || exit 1
 label=com.peter.voice-desk-receiver
 plist="$HOME/Library/LaunchAgents/$label.plist"
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.voice_desk"
+mkdir -p "$HOME/Library/LaunchAgents"
+# the app's folder used to be ~/.claude_voice; carry it over (threads, phone token, transcript) rather than start empty
+[ -d "$HOME/.claude_voice" ] && [ ! -e "$HOME/.voice_desk" ] && mv "$HOME/.claude_voice" "$HOME/.voice_desk"
+mkdir -p "$HOME/.voice_desk"
 cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

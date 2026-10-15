@@ -4,7 +4,10 @@
 set -u
 label=com.peter.claude-remote-control
 plist="$HOME/Library/LaunchAgents/$label.plist"
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.voice_desk"
+mkdir -p "$HOME/Library/LaunchAgents"
+# the app's folder used to be ~/.claude_voice; carry it over (threads, phone token, transcript) rather than start empty
+[ -d "$HOME/.claude_voice" ] && [ ! -e "$HOME/.voice_desk" ] && mv "$HOME/.claude_voice" "$HOME/.voice_desk"
+mkdir -p "$HOME/.voice_desk"
 claude_bin="$(command -v claude || echo /opt/homebrew/bin/claude)"
 cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
