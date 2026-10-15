@@ -45,10 +45,11 @@ def synthesize(text: str) -> Optional[Path]:
             subprocess.run([S.FFMPEG, "-loglevel", "error", "-y", "-i", str(aiff), str(out)], capture_output=True)
             return out if out.exists() else None
         return None
-    r = subprocess.run([str(S.TTS_CHAIN), str(txt), str(out), S.TTS_VOICE_EN, S.TTS_ORDER],
-                       capture_output=True, timeout=120)
-    if r.returncode == 0 and out.exists() and out.stat().st_size > 0:
-        return out
+    if S.TTS_CHAIN.exists():                 # optional voice chain; without it the Mac voice below speaks
+        r = subprocess.run([str(S.TTS_CHAIN), str(txt), str(out), S.TTS_VOICE_EN, S.TTS_ORDER],
+                           capture_output=True, timeout=120)
+        if r.returncode == 0 and out.exists() and out.stat().st_size > 0:
+            return out
     # last resort: the plain Mac voice, so the loop never goes silent
     aiff = tmp / "say.aiff"
     r = subprocess.run(["/usr/bin/say", "-r", "185", "-f", str(txt), "-o", str(aiff)], capture_output=True)

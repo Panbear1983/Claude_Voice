@@ -7,6 +7,7 @@ sleep timer; both are switchable from inside the window.
 from __future__ import annotations
 
 import os
+import pwd
 from pathlib import Path
 
 HOME = Path.home()
@@ -79,8 +80,11 @@ EFFORT_FILE = STATE_DIR / "effort"               # set by voice: "think deep", "
 TURN_LOCK_FILE = STATE_DIR / "turn.lock"
 TRANSCRIPT_LOG = STATE_DIR / "transcript.log"
 
-VOICE_SYSTEM_PROMPT = """You are talking with Peter through a live voice loop. He hears you; he is not reading a screen.
-Reply the way you would speak on the phone: plain spoken English (answer in Mandarin if he spoke Mandarin), one to four short sentences, lead with the outcome.
+# who Claude is talking to: CLAUDE_VOICE_NAME, else the first word of the Mac account's full name
+USER_NAME = os.environ.get("CLAUDE_VOICE_NAME") or (pwd.getpwuid(os.getuid()).pw_gecos.split() or ["the user"])[0]
+
+VOICE_SYSTEM_PROMPT = f"""You are talking with {USER_NAME} through a live voice loop. {USER_NAME} hears you and is not reading a screen.
+Reply the way you would speak on the phone: plain spoken English (answer in Mandarin if they spoke Mandarin), one to four short sentences, lead with the outcome.
 No markdown, no bullet lists, no headings, no code blocks, no file paths, no URLs, no emojis, nothing that cannot be read aloud.
 If the real answer needs code or long detail, do the work, write the detail to the file ~/.claude_voice/detail.md, and say in one sentence that the detail is in the window.
 Do not ask more than one question at a time. Never end with a summary of what you just said."""

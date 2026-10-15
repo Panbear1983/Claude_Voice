@@ -35,10 +35,10 @@ class ClaudeVoice(App):
     CSS = """
     Screen { layout: vertical; }
     #top { height: 3; }
-    #light { width: 1fr; content-align: center middle; text-style: bold; color: white; }
-    #mode { width: 28; content-align: center middle; color: #bbbbbb; }
+    #light { width: 1fr; height: 100%; content-align: center middle; text-style: bold; color: white; }
+    #mode { width: 28; height: 100%; content-align: center middle; color: #bbbbbb; }
     #log { height: 1fr; border: round #444444; padding: 0 1; }
-    """
+    """ + "".join(f"#light.{state} {{ background: {colour}; }}\n" for state, (_, colour) in LIGHT.items())
     BINDINGS = [
         Binding("space", "tap", "talk (tap mode)"),
         Binding("m", "mode", "open mic / tap"),
@@ -54,7 +54,7 @@ class ClaudeVoice(App):
     def compose(self) -> ComposeResult:
         with Vertical():
             with Horizontal(id="top"):
-                yield Static("●  starting", id="light")
+                yield Static("●  starting", id="light", classes="starting")
                 yield Static("open mic", id="mode")
             yield RichLog(id="log", wrap=True, markup=True, highlight=False)
             yield Footer()
@@ -84,10 +84,11 @@ class ClaudeVoice(App):
     def _apply(self, kind: str, text: str) -> None:
         log = self.query_one("#log", RichLog)
         if kind == "state":
-            label, colour = LIGHT.get(text, (text, "#555555"))
+            label, _ = LIGHT.get(text, (text, ""))
             light = self.query_one("#light", Static)
+            # one CSS class per state: an inline styles.background change does not repaint in Textual 7.5
+            light.set_classes(text if text in LIGHT else "starting")
             light.update(label)
-            light.styles.background = colour
             if text == "off":
                 self.set_timer(1.5, self.exit)
         elif kind == "you":

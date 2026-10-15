@@ -134,6 +134,7 @@ class Brain:
         ticker.start()
         result = ""
         session_in_use = False
+        pending = ""        # text is shown as progress only once a tool call follows it; the last text is the reply
         try:
             assert self._proc.stdout
             for line in self._proc.stdout:
@@ -151,8 +152,13 @@ class Brain:
                     for block in (ev.get("message") or {}).get("content", []):
                         if block.get("type") == "tool_use":
                             self.last_tool = block.get("name", "")
+                            if pending:
+                                on_text(pending)
+                                pending = ""
                         elif block.get("type") == "text" and block.get("text"):
-                            on_text(block["text"])
+                            if pending:
+                                on_text(pending)
+                            pending = block["text"]
                 elif t == "result":
                     result = ev.get("result") or ""
                     if ev.get("session_id"):
