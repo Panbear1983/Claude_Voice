@@ -1,4 +1,5 @@
-"""The brains: one headless Claude Code thread, plus one headless thread per Hermes profile.
+"""The brains: one headless Claude Code thread, one Gemini conversation, and one headless thread
+per Hermes profile.
 
 `Brain` is the front door the window and the phone receiver talk to. It keeps a separate
 conversation per target ("claude", or "hermes:<profile>"), remembers which one you are
@@ -149,7 +150,7 @@ class ClaudeBrain:
                "--append-system-prompt", S.VOICE_SYSTEM_PROMPT]
         if self.session_id:
             cmd += ["--resume", self.session_id]
-        env = dict(os.environ, CLAUDE_VOICE_LOOP="1")
+        env = dict(os.environ, VOICE_DESK_LOOP="1")
         self.last_tool = ""
         self._proc = subprocess.Popen(cmd, cwd=str(S.CLAUDE_CWD), env=env, text=True,
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -275,7 +276,7 @@ class HermesBrain:
         cmd = [S.HERMES_BIN, "-p", self.profile, "-z", prompt]
         if self.session_id:
             cmd += ["--resume", self.session_id]
-        env = dict(os.environ, HERMES_HOME=str(self.home), CLAUDE_VOICE_LOOP="1")
+        env = dict(os.environ, HERMES_HOME=str(self.home), VOICE_DESK_LOOP="1")
         started = time.time()
         self.last_tool = ""
         self._proc = subprocess.Popen(cmd, cwd=str(S.CLAUDE_CWD), env=env, text=True,
@@ -314,6 +315,79 @@ class HermesBrain:
 
 
 # =============================================================================================
+class GeminiBrain:
+    """One Gemini conversation through Google's Antigravity command-line tool (`agy`), which is
+    what Google now points individual Gemini subscribers at: `agy -p <text> --conversation <id>`.
+    It answers in JSON with the conversation id, so resuming is exact."""
+
+    name = "Gemini"
+    target = "gemini"
+
+    def __init__(self) -> None:
+        self.session_id: Optional[str] = self._load_session()
+        self.last_tool = ""
+        self._proc: Optional[subprocess.Popen] = None
+
+    def _load_session(self) -> Optional[str]:
+        try:
+            sid = S.GEMINI_SESSION_FILE.read_text().strip()
+            return sid or None
+        except OSError:
+            return None
+
+    def _save_session(self, sid: str) -> None:
+        S.GEMINI_SESSION_FILE.write_text(sid)
+        self.session_id = sid
+
+    def new_thread(self) -> None:
+        try:
+            S.GEMINI_SESSION_FILE.unlink()
+        except OSError:
+            pass
+        self.session_id = None
+
+    def ask(self, text: str, on_status: StatusCb = lambda s: None, on_text: TextCb = lambda s: None) -> str:
+        cmd = [S.GEMINI_BIN, "-p", text + "\n\n" + S.HERMES_VOICE_NOTE, "--output-format", "json",
+               "--model", S.GEMINI_MODEL, "--dangerously-skip-permissions"]
+        if self.session_id:
+            cmd += ["--conversation", self.session_id]      # a lost id only warns; a fresh one comes back
+        env = dict(os.environ, VOICE_DESK_LOOP="1")
+        self.last_tool = ""
+        self._proc = subprocess.Popen(cmd, cwd=str(S.CLAUDE_CWD), env=env, text=True,
+                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stop = threading.Event()
+        threading.Thread(target=_status_ticker, args=(stop, on_status, lambda: ""), daemon=True).start()
+        out = err = ""
+        try:
+            out, err = self._proc.communicate(timeout=S.GEMINI_TURN_TIMEOUT_SEC)
+        except subprocess.TimeoutExpired:
+            self._proc.kill()
+            out, err = self._proc.communicate()
+        finally:
+            stop.set()
+            self._proc = None
+        result = ""
+        try:
+            data = json.loads(out.strip().splitlines()[-1]) if out.strip() else {}
+            result = (data.get("response") or "").strip()
+            if data.get("conversation_id"):
+                self._save_session(data["conversation_id"])
+        except (ValueError, IndexError):
+            result = out.strip()
+        if not result:
+            lines = [ln for ln in err.strip().splitlines() if ln.strip()]
+            tail = lines[-1] if lines else "no reply"
+            return f"I did not get an answer back from Gemini. The error was: {tail}"
+        _log(self.name, text, result)
+        return result
+
+    def cancel(self) -> None:
+        p = self._proc
+        if p and p.poll() is None:
+            p.terminate()
+
+
+# =============================================================================================
 def hermes_profiles() -> list[str]:
     """Hermes profiles on this Mac that can hold a conversation (they have their own session store)."""
     try:
@@ -332,12 +406,13 @@ class Brain:
 
     def __init__(self) -> None:
         self.claude = ClaudeBrain()
+        self.gemini = GeminiBrain()
         self._hermes: dict[str, HermesBrain] = {}
         self._current = self.claude
 
     # -- targets --------------------------------------------------------------------------
     def targets(self) -> list[str]:
-        return ["claude"] + [f"hermes:{p}" for p in hermes_profiles()]
+        return ["claude"] + (["gemini"] if Path(S.GEMINI_BIN).exists() else []) + [f"hermes:{p}" for p in hermes_profiles()]
 
     def target(self) -> str:
         """The sticky target (what the Mac window talks to), set by voice."""
@@ -354,6 +429,8 @@ class Brain:
         t = self.resolve(target) if target else self.target()
         if not t or t == "claude":
             return self.claude
+        if t == "gemini":
+            return self.gemini
         profile = t.split(":", 1)[1]
         if profile not in self._hermes:
             self._hermes[profile] = HermesBrain(profile)
@@ -371,6 +448,8 @@ class Brain:
             return s
         if s in ("claude", "claude code"):
             return "claude"
+        if s in ("gemini", "google", "google gemini", "antigravity") and "gemini" in self.targets():
+            return "gemini"
         s = re.sub(r"^(the|to)\s+", "", s)
         hits = []
         for p in hermes_profiles():

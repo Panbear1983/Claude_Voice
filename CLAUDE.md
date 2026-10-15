@@ -1,1 +1,1 @@
-See AGENTS.md (wing `claude_voice`).
+See AGENTS.md (wing `voice_desk`).

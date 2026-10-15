@@ -1,4 +1,4 @@
-"""Claude Voice — one place for every tunable.
+"""Voice Desk — one place for every tunable.
 
 Plain constants, no config file: Peter asked for a few presets, not a page of knobs.
 The two presets that matter are the listening mode (open mic / tap to talk) and the
@@ -12,7 +12,10 @@ from pathlib import Path
 
 HOME = Path.home()
 REPO = Path(__file__).resolve().parent
-STATE_DIR = Path(os.environ.get("CLAUDE_VOICE_STATE", HOME / ".claude_voice"))
+STATE_DIR = Path(os.environ.get("VOICE_DESK_STATE", HOME / ".voice_desk"))
+_OLD_STATE_DIR = HOME / ".claude_voice"            # the folder's name before the app became Voice Desk
+if "VOICE_DESK_STATE" not in os.environ and not STATE_DIR.exists() and _OLD_STATE_DIR.is_dir():
+    _OLD_STATE_DIR.rename(STATE_DIR)               # keeps the threads, the phone token and the transcript
 STATE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---- microphone / silence detection -------------------------------------------------
@@ -45,7 +48,7 @@ TRAILING_SEND_WORDS = ("over", "over.", "send", "send.")
 # ---- speech to text ------------------------------------------------------------------
 WHISPER_SERVER = "/opt/homebrew/bin/whisper-server"
 WHISPER_MODEL = HOME / ".local/share/whisper-models/ggml-small.bin"   # 1.2 s per turn; large-v3-turbo is 4.5 s
-WHISPER_PORT = int(os.environ.get("CLAUDE_VOICE_WHISPER_PORT", "8178"))
+WHISPER_PORT = int(os.environ.get("VOICE_DESK_WHISPER_PORT", "8178"))
 WHISPER_THREADS = 8
 WHISPER_LANGUAGE = "auto"       # English and Mandarin both land correctly
 
@@ -61,7 +64,7 @@ WHISPER_HALLUCINATIONS = {
 TTS_CHAIN = HOME / ".hermes/profiles/orchestrator/scripts/tts_jenny_or_mac.sh"
 # "piper mac" for now: trying Jenny first costs ~6 s per reply while Microsoft keeps refusing her.
 # Put "edge" back in front when Jenny works again.
-TTS_ORDER = os.environ.get("CLAUDE_VOICE_TTS_ORDER", "piper mac")
+TTS_ORDER = os.environ.get("VOICE_DESK_TTS_ORDER", "piper mac")
 TTS_VOICE_EN = "en-US-JennyNeural"
 TTS_VOICE_ZH_MAC = "Meijia"      # Taiwan Mandarin, the voice Peter uses elsewhere
 AFPLAY = "/usr/bin/afplay"
@@ -69,7 +72,7 @@ FFMPEG = "/opt/homebrew/bin/ffmpeg"
 STATUS_EVERY_SEC = 10           # spoken "still working" while Claude thinks
 
 # ---- the brain -----------------------------------------------------------------------
-CLAUDE_BIN = os.environ.get("CLAUDE_VOICE_CLAUDE_BIN", "claude")
+CLAUDE_BIN = os.environ.get("VOICE_DESK_CLAUDE_BIN", "claude")
 CLAUDE_CWD = HOME               # the thread runs in Peter's home, so every repo is reachable
 CLAUDE_TURN_TIMEOUT_SEC = 600
 SESSION_FILE = STATE_DIR / "session_id"          # one thread shared by the Mac window and the phone
@@ -80,19 +83,19 @@ EFFORT_FILE = STATE_DIR / "effort"               # set by voice: "think deep", "
 TURN_LOCK_FILE = STATE_DIR / "turn.lock"
 TRANSCRIPT_LOG = STATE_DIR / "transcript.log"
 
-# who Claude is talking to: CLAUDE_VOICE_NAME, else the first word of the Mac account's full name
-USER_NAME = os.environ.get("CLAUDE_VOICE_NAME") or (pwd.getpwuid(os.getuid()).pw_gecos.split() or ["the user"])[0]
+# who Claude is talking to: VOICE_DESK_NAME, else the first word of the Mac account's full name
+USER_NAME = os.environ.get("VOICE_DESK_NAME") or (pwd.getpwuid(os.getuid()).pw_gecos.split() or ["the user"])[0]
 
 VOICE_SYSTEM_PROMPT = f"""You are talking with {USER_NAME} through a live voice loop. {USER_NAME} hears you and is not reading a screen.
 Reply the way you would speak on the phone: plain spoken English (answer in Mandarin if they spoke Mandarin), one to four short sentences, lead with the outcome.
 No markdown, no bullet lists, no headings, no code blocks, no file paths, no URLs, no emojis, nothing that cannot be read aloud.
-If the real answer needs code or long detail, do the work, write the detail to the file ~/.claude_voice/detail.md, and say in one sentence that the detail is in the window.
+If the real answer needs code or long detail, do the work, write the detail to the file ~/.voice_desk/detail.md, and say in one sentence that the detail is in the window.
 Do not ask more than one question at a time. Never end with a summary of what you just said."""
 
 # ---- the other brains: Hermes profiles --------------------------------------------------
 # Every Hermes profile on this Mac is its own separate thread. Say "talk to Esther" /
 # "talk to Claude" to switch; each phone Shortcut is pinned to one of them.
-HERMES_BIN = os.environ.get("CLAUDE_VOICE_HERMES_BIN", str(HOME / ".local/bin/hermes"))
+HERMES_BIN = os.environ.get("VOICE_DESK_HERMES_BIN", str(HOME / ".local/bin/hermes"))
 HERMES_PROFILES_DIR = Path(os.environ.get("HERMES_PROFILES_DIR", HOME / ".hermes/profiles"))
 HERMES_SKIP_PROFILES = {"default"}                # lives at ~/.hermes itself and has no session store
 HERMES_DISPLAY_NAMES = {"tax_angel_esther": "Esther"}   # spoken names; everything else is the profile name in words
@@ -103,7 +106,15 @@ HERMES_VOICE_NOTE = (f"(Voice call with {USER_NAME}: they hear you and are not r
                      "would speak on the phone, one to four short sentences, in Mandarin if they spoke Mandarin, "
                      "lead with the outcome. No markdown, lists, code, file paths, URLs or emojis.)")
 
+# ---- Gemini, through Google's Antigravity command-line tool ---------------------------------
+# Google retired the old Gemini CLI for individual subscribers; `agy` is its replacement and
+# runs the Gemini models on the same subscription. Absent -> Gemini is simply not offered.
+GEMINI_BIN = os.environ.get("VOICE_DESK_GEMINI_BIN", str(HOME / ".local/bin/agy"))
+GEMINI_MODEL = "gemini-3.8-flash-medium"          # `agy models` lists the choices
+GEMINI_TURN_TIMEOUT_SEC = 600
+GEMINI_SESSION_FILE = STATE_DIR / "gemini_session"
+
 # ---- phone receiver ------------------------------------------------------------------
-RECEIVER_HOST = os.environ.get("CLAUDE_VOICE_RECEIVER_HOST", "0.0.0.0")   # Tailscale + LAN; token-protected
-RECEIVER_PORT = int(os.environ.get("CLAUDE_VOICE_RECEIVER_PORT", "8765"))
+RECEIVER_HOST = os.environ.get("VOICE_DESK_RECEIVER_HOST", "0.0.0.0")   # Tailscale + LAN; token-protected
+RECEIVER_PORT = int(os.environ.get("VOICE_DESK_RECEIVER_PORT", "8765"))
 RECEIVER_TOKEN_FILE = STATE_DIR / "receiver_token"

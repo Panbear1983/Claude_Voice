@@ -1,4 +1,4 @@
-"""Claude Voice — the small window: a coloured light, a transcript, four keys.
+"""Voice Desk — the small window: a coloured light, a transcript, four keys.
 
 Peter never types here. Space = tap-to-talk (only in tap mode), M = switch mode,
 S = sleep/wake, N = new conversation thread, Q = quit.
@@ -30,8 +30,8 @@ LIGHT = {
 }
 
 
-class ClaudeVoice(App):
-    TITLE = "Claude Voice"
+class VoiceDesk(App):
+    TITLE = "Voice Desk"
     CSS = """
     Screen { layout: vertical; }
     #top { height: 3; }
@@ -134,9 +134,9 @@ def main() -> None:
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        print("Claude Voice is already open in another window.")
+        print("Voice Desk is already open in another window.")
         sys.exit(1)
-    ClaudeVoice().run()
+    VoiceDesk().run()
 
 
 if __name__ == "__main__":

@@ -7,7 +7,8 @@ Stages: 1 silence detector on synthetic audio, 2 whisper-server transcription of
 clip, 3 English + Mandarin voices, 4 two Claude turns on one thread (memory check),
 5 the phone receiver's check-back polling with a stand-in brain, 6 the window mounts
 headlessly with the loop stubbed out, 7 the brain router ("talk to Esther", one thread
-per Hermes profile) without spending a token, 8 (--hermes) two live Hermes turns.
+per Hermes profile) without spending a token, 8 (--hermes) two live Hermes turns,
+9 (--gemini) two live Gemini turns through Google's Antigravity tool.
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("CLAUDE_VOICE_STATE", tempfile.mkdtemp(prefix="cv-state-"))
+os.environ.setdefault("VOICE_DESK_STATE", tempfile.mkdtemp(prefix="cv-state-"))
 
 import settings as S  # noqa: E402
 import stt  # noqa: E402
@@ -197,14 +198,30 @@ def stage_hermes() -> None:
     report("hermes: second turn remembers the first", "lantern" in second.lower(), second[:80])
 
 
+# 9 ---------------------------------------------------------------------------------------------
+def stage_gemini() -> None:
+    """Two live Gemini turns: the second must remember the first, and the conversation id is kept."""
+    import brain as B
+    b = B.Brain()
+    if "gemini" not in b.targets():
+        report("gemini: agy not installed", False)
+        return
+    t0 = time.monotonic()
+    first = b.ask("Remember that the code word is harbour. Reply in one short sentence.", to="gemini")
+    sid = b.gemini.session_id
+    report("gemini: first turn answered + conversation id kept", bool(first) and bool(sid), f"{time.monotonic()-t0:.0f}s {sid} {first[:60]!r}")
+    second = b.ask("What is the code word? Three words or fewer.", to="gemini")
+    report("gemini: second turn remembers the first", "harbour" in second.lower() or "harbor" in second.lower(), second[:80])
+
+
 # 6 ---------------------------------------------------------------------------------------------
 def stage_window() -> None:
     import engine
     engine.Engine.start = lambda self: None          # no mic, no whisper in the test
-    from app import ClaudeVoice
+    from app import VoiceDesk
 
     async def run() -> tuple[str, bool]:
-        app = ClaudeVoice()
+        app = VoiceDesk()
         async with app.run_test(size=(100, 24)) as pilot:
             await pilot.pause()
             app._apply("state", "listening")
@@ -239,5 +256,7 @@ if __name__ == "__main__":
     stage_router()
     if "--hermes" in sys.argv:
         stage_hermes()
+    if "--gemini" in sys.argv:
+        stage_gemini()
     print("ALL PASS" if ok else "SOME FAILED")
     sys.exit(0 if ok else 1)

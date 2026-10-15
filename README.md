@@ -1,8 +1,8 @@
 <div align="center">
 
-# Claude Voice
+# Voice Desk
 
-**Talk to Claude Code like a phone call. Hands-free, on your Mac and your iPhone.**
+**Talk to Claude Code, Gemini and your Hermes agents like a phone call. One voice line, hands-free, on your Mac and your iPhone.**
 
 <table>
 <tr>
@@ -10,7 +10,7 @@
 <img src="docs/img/iphone/siri_answer.jpg" alt="iPhone: Siri showing Claude's spoken answer — Yes, Claude is working. You are talking to it right now, and this answer came from the Mac to your phone the normal way." width="100%">
 </td>
 <td width="60%" valign="middle">
-<img src="docs/img/loop.gif" alt="The Claude Voice window on the Mac cycling through listening, hearing you, thinking and speaking" width="100%">
+<img src="docs/img/loop.gif" alt="The Voice Desk window on the Mac cycling through listening, hearing you, thinking and speaking" width="100%">
 </td>
 </tr>
 <tr>
@@ -28,7 +28,9 @@ the microphone opens again for your next sentence. There's no record button, no 
 button and no typing.
 
 This isn't a chatbot with a voice bolted on. It is **the real Claude Code**, with your
-files, your terminal and the web, driven by your voice. Ask it to count the lines in a
+files, your terminal and the web, driven by your voice. And it is a desk with more than one
+person behind it: say "talk to Gemini" or "talk to Esther" (a [Hermes](https://github.com/NousResearch/hermes-agent)
+profile) and the same line carries on with that brain's own separate conversation. Ask it to count the lines in a
 project, check why a job failed, or look something up. While it works it tells you what
 it's doing ("still running a command"), so you're never left in silence. Away from the
 desk, the same conversation continues on your iPhone through Siri.
@@ -45,8 +47,9 @@ desk, the same conversation continues on your iPhone through Siri.
 - **Bilingual.** Speak English or Mandarin, and get the answer back in the same language.
 - **No API key.** It uses the `claude` command you're already logged into, on your normal subscription.
 - **Change things by voice.** "Use Opus", "think deep", "go to sleep", "goodbye".
-- **More than one brain.** Run [Hermes](https://github.com/NousResearch/hermes-agent) profiles too? Say
-  "talk to Esther" and the same window and phone door carry on with that profile's own thread.
+- **More than one brain.** Gemini and every [Hermes](https://github.com/NousResearch/hermes-agent) profile
+  on the Mac are on the same line. Say "talk to Gemini" or "talk to Esther" and the window and the
+  phone carry on with that brain's own thread.
 
 ---
 
@@ -106,7 +109,7 @@ curl -L -o ~/.local/share/whisper-models/ggml-small.bin \
   https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
 
 # 3. the app
-git clone https://github.com/Panbear1983/Claude_Voice.git && cd Claude_Voice
+git clone https://github.com/Panbear1983/Voice_Desk.git && cd Voice_Desk
 uv venv .venv --python 3.11          # or: python3.11 -m venv .venv
 uv pip install --python .venv/bin/python -r requirements.txt
 
@@ -132,7 +135,7 @@ The first time it opens, macOS asks whether Terminal may use the microphone. Cli
 | "which model" | tells you which model it's using |
 | "think deep" / "quick mode" / "max effort" / "normal mode" | how hard Claude thinks |
 | "which effort" | tells you the current effort level |
-| "talk to Esther" / "talk to the orchestrator" / "talk to Claude" | switches to another brain: every [Hermes](https://github.com/NousResearch/hermes-agent) profile on the Mac is its own separate conversation |
+| "talk to Gemini" / "talk to Esther" / "talk to the orchestrator" / "talk to Claude" | switches to another brain, each with its own separate conversation: Gemini, and every [Hermes](https://github.com/NousResearch/hermes-agent) profile on the Mac |
 | "who am I talking to" / "who can I talk to" | which brain is on, and the list |
 | "open mic" / "tap to talk" | switches listening mode (tap mode is for noisy rooms) |
 | "goodbye", 「再見」 | ends the session; Claude saves a short note about what you discussed |
@@ -167,7 +170,12 @@ Control session running on the Mac, so the Claude app on your phone always finds
 
 ## More than one brain
 
-If [Hermes Agent](https://github.com/NousResearch/hermes-agent) is installed, every profile
+**Gemini** joins if Google's Antigravity command-line tool (`agy`, the replacement for the
+retired Gemini CLI, on a normal Gemini subscription) is installed and signed in. "Talk to
+Gemini" starts or continues one Gemini conversation; `GEMINI_MODEL` in `settings.py` picks the
+model (`agy models` lists them, Gemini 3.8 Flash by default).
+
+**Hermes.** If [Hermes Agent](https://github.com/NousResearch/hermes-agent) is installed, every profile
 under `~/.hermes/profiles` is a separate thread you can talk to, with its own memory of
 what you said. Nothing to configure: the profiles are found at start.
 
@@ -181,7 +189,7 @@ what you said. Nothing to configure: the profiles are found at start.
 
 Each Hermes turn runs that profile headlessly (`hermes -p <profile> -z … --resume <id>`),
 in its own home, with its own model, tools and memory. The session id is kept per profile in
-`~/.claude_voice/hermes_sessions/`. Spoken names can be overridden in `HERMES_DISPLAY_NAMES`.
+`~/.voice_desk/hermes_sessions/`. Spoken names can be overridden in `HERMES_DISPLAY_NAMES`.
 
 ## Make it yours
 
@@ -197,10 +205,10 @@ Everything adjustable is a plain constant in `settings.py`:
 | `TTS_CHAIN` / `TTS_ORDER` | optional script | your own voice pipeline (Piper, Edge…); without it, the built-in Mac voice speaks |
 | `WAKE_WORDS`, `STOP_WORDS`, … | see file | your own phrases, in any language |
 
-Claude calls you by the first name on your Mac account. Set `CLAUDE_VOICE_NAME` to
-change it. Other environment overrides: `CLAUDE_VOICE_STATE`, `CLAUDE_VOICE_TTS_ORDER`,
-`CLAUDE_VOICE_CLAUDE_BIN`, `CLAUDE_VOICE_WHISPER_PORT`, `CLAUDE_VOICE_RECEIVER_HOST`,
-`CLAUDE_VOICE_RECEIVER_PORT`.
+Claude calls you by the first name on your Mac account. Set `VOICE_DESK_NAME` to
+change it. Other environment overrides: `VOICE_DESK_STATE`, `VOICE_DESK_TTS_ORDER`,
+`VOICE_DESK_CLAUDE_BIN`, `VOICE_DESK_WHISPER_PORT`, `VOICE_DESK_RECEIVER_HOST`,
+`VOICE_DESK_RECEIVER_PORT`.
 
 ## Safety, in plain words
 
@@ -209,18 +217,18 @@ change it. Other environment overrides: `CLAUDE_VOICE_STATE`, `CLAUDE_VOICE_TTS_
 - **The phone receiver is only as safe as its token.** By default it listens on your home
   network and Tailscale. Anyone with the token who can reach your Mac could talk to Claude
   as you. The token is random, kept in a private file and inside the Shortcut, and never
-  committed. To allow Tailscale only, set `CLAUDE_VOICE_RECEIVER_HOST` to your Mac's
-  Tailscale address. To rotate the token, delete `~/.claude_voice/receiver_token`, restart
+  committed. To allow Tailscale only, set `VOICE_DESK_RECEIVER_HOST` to your Mac's
+  Tailscale address. To rotate the token, delete `~/.voice_desk/receiver_token`, restart
   the receiver and rebuild the Shortcut.
-- **It won't hear itself.** Each voice turn sets `CLAUDE_VOICE_LOOP=1`, so Claude Code hooks
+- **It won't hear itself.** Each voice turn sets `VOICE_DESK_LOOP=1`, so Claude Code hooks
   can skip anything that would speak twice. While the window is open, it holds
-  `~/.claude_voice/window.lock`, which other read-aloud hooks can check. That stops the
+  `~/.voice_desk/window.lock`, which other read-aloud hooks can check. That stops the
   open mic from mistaking another session's spoken answer for you.
 
 <details>
 <summary><b>Where things are kept</b></summary>
 
-Nothing personal lives in the repo. The app's memory is `~/.claude_voice/`:
+Nothing personal lives in the repo. The app's memory is `~/.voice_desk/`:
 
 | File | Holds |
 |---|---|
@@ -243,7 +251,7 @@ Nothing personal lives in the repo. The app's memory is `~/.claude_voice/`:
 | "already open in another window" | only one window at a time; close the other |
 | Light stuck on *hearing you* | room too loud for open mic; press <kbd>M</kbd> for tap mode |
 | It answers things you didn't say | something else on the Mac is talking; mute it or use tap mode |
-| Siri says "something went wrong" | Tailscale off on the phone, or the receiver isn't running (`curl http://<mac-tailscale-ip>:8765/health`); `~/.claude_voice/receiver.log` has one line per request. An old Shortcut built before the check-back design times out on long answers: rebuild and re-add it |
+| Siri says "something went wrong" | Tailscale off on the phone, or the receiver isn't running (`curl http://<mac-tailscale-ip>:8765/health`); `~/.voice_desk/receiver.log` has one line per request. An old Shortcut built before the check-back design times out on long answers: rebuild and re-add it |
 | A new conversation started by itself | you opened the voice thread in another `claude --resume` window and left it open; read it, then quit |
 | Slow to start speaking | your `TTS_ORDER` tries a voice that keeps failing first; reorder it |
 

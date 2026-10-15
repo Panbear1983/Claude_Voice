@@ -18,12 +18,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("CLAUDE_VOICE_STATE", tempfile.mkdtemp(prefix="cv-shots-"))
+os.environ.setdefault("VOICE_DESK_STATE", tempfile.mkdtemp(prefix="cv-shots-"))
 
 import engine  # noqa: E402
 
 engine.Engine.start = lambda self: None          # no mic, no whisper
-from app import ClaudeVoice  # noqa: E402
+from app import VoiceDesk  # noqa: E402
 from rich.cells import cell_len  # noqa: E402
 
 OUT = ROOT / "docs/img"
@@ -45,7 +45,7 @@ def fix_wide_chars(svg: str) -> str:
 
 async def shoot() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    app = ClaudeVoice()
+    app = VoiceDesk()
     async with app.run_test(size=SIZE) as pilot:
 
         async def snap(name: str, state: str, level: float) -> None:

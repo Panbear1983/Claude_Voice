@@ -3,9 +3,9 @@
 # something to talk to while the Mac is awake. Re-run any time; it reloads.
 set -u
 cd "$(dirname "$0")" || exit 1
-label=com.peter.claude-voice-receiver
+label=com.peter.voice-desk-receiver
 plist="$HOME/Library/LaunchAgents/$label.plist"
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.claude_voice"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.voice_desk"
 cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -15,8 +15,8 @@ cat > "$plist" <<PLIST
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>WorkingDirectory</key><string>$PWD</string>
-  <key>StandardOutPath</key><string>$HOME/.claude_voice/receiver.log</string>
-  <key>StandardErrorPath</key><string>$HOME/.claude_voice/receiver.log</string>
+  <key>StandardOutPath</key><string>$HOME/.voice_desk/receiver.log</string>
+  <key>StandardErrorPath</key><string>$HOME/.voice_desk/receiver.log</string>
   <key>EnvironmentVariables</key><dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin</string>
     <key>HOME</key><string>$HOME</string>

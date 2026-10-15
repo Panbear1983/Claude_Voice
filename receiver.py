@@ -187,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     srv = ThreadingHTTPServer((S.RECEIVER_HOST, S.RECEIVER_PORT), Handler)
-    log(f"Claude Voice receiver on {S.RECEIVER_HOST}:{S.RECEIVER_PORT}")
+    log(f"Voice Desk receiver on {S.RECEIVER_HOST}:{S.RECEIVER_PORT}")
     srv.serve_forever()
 
 

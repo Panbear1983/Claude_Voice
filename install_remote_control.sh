@@ -4,7 +4,7 @@
 set -u
 label=com.peter.claude-remote-control
 plist="$HOME/Library/LaunchAgents/$label.plist"
-mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.claude_voice"
+mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.voice_desk"
 claude_bin="$(command -v claude || echo /opt/homebrew/bin/claude)"
 cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -21,7 +21,7 @@ cat > "$plist" <<PLIST
   <key>ThrottleInterval</key><integer>30</integer>
   <key>WorkingDirectory</key><string>$HOME</string>
   <key>StandardOutPath</key><string>/dev/null</string>
-  <key>StandardErrorPath</key><string>$HOME/.claude_voice/remote-control.log</string>
+  <key>StandardErrorPath</key><string>$HOME/.voice_desk/remote-control.log</string>
   <key>EnvironmentVariables</key><dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin</string>
     <key>HOME</key><string>$HOME</string>

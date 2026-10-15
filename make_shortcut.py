@@ -25,10 +25,10 @@ from brain import Brain
 
 REPEATS = 300          # one tap gives up to 300 exchanges
 TAILSCALE = shutil.which("tailscale") or "/opt/homebrew/bin/tailscale"
-TAILSCALE_IP = os.environ.get("CLAUDE_VOICE_MAC_IP") or (
+TAILSCALE_IP = os.environ.get("VOICE_DESK_MAC_IP") or (
     subprocess.run([TAILSCALE, "ip", "-4"], capture_output=True, text=True).stdout.strip().splitlines() or [""])[0]
 if not TAILSCALE_IP:
-    sys.exit("No Tailscale address found. Install Tailscale and sign in, or set CLAUDE_VOICE_MAC_IP.")
+    sys.exit("No Tailscale address found. Install Tailscale and sign in, or set VOICE_DESK_MAC_IP.")
 URL_ASK = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/ask"
 URL_REPLY = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/reply"
 TOKEN = S.RECEIVER_TOKEN_FILE.read_text().strip()
