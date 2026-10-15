@@ -10,5 +10,17 @@
   "progress": "",
   "status": "",
   "claude": "台北現在是星期四下午四點四十五分。"
+ },
+ {
+  "you": "Talk to Esther.",
+  "progress": "",
+  "status": "",
+  "claude": "Okay, you are talking to Esther now."
+ },
+ {
+  "you": "Esther, did we finish the 2025 return?",
+  "progress": "",
+  "status": "",
+  "claude": "Yes, the 2025 return was filed and accepted. The only open item is whether to amend it; nothing is due right now."
  }
 ]

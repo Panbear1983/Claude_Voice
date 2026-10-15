@@ -72,6 +72,9 @@ conversation recorded from real Claude turns.
 <td><img src="docs/img/05_mandarin.png" alt="A question and answer in Mandarin"><br><b>中文 works too.</b> Ask in Mandarin, hear the answer in a Taiwan Mandarin voice.</td>
 <td><img src="docs/img/06_asleep.png" alt="Grey light: asleep"><br><b>Asleep.</b> After a minute of quiet it naps. Say "hey Claude" to wake it.</td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/img/07_brains.png" alt="Saying 'Talk to Esther' switches the thread; the label in the corner and in the transcript changes to Esther"><br><b>More than one brain.</b> "Talk to Esther" hands the line to a Hermes profile with its own memory of what you said; the corner label and the transcript follow. "Talk to Gemini" and "talk to Claude" work the same way.</td>
+</tr>
 </table>
 
 ## How it works
@@ -186,6 +189,8 @@ what you said. Nothing to configure: the profiles are found at start.
 - **From the phone:** one Shortcut per brain, pinned to it, so the wake phrase picks the
   thread: `make_shortcut.py --to esther` builds "Talk to Esther", `--all` builds one for
   every brain. "Hey Siri, Talk to Esther" and "Hey Siri, Talk to Claude" never mix.
+
+<p align="center"><img src="docs/img/iphone/shortcuts.jpg" alt="The iPhone Shortcuts app showing one Talk to ... Shortcut per brain: Gemini, Wanna Buffet, Assistant, Esther, Orchestrator, Claude" width="320"><br><sub>One Shortcut per brain on the iPhone. Each is a Siri phrase.</sub></p>
 
 Each Hermes turn runs that profile headlessly (`hermes -p <profile> -z … --resume <id>`),
 in its own home, with its own model, tools and memory. The session id is kept per profile in

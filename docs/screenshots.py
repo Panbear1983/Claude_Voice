@@ -54,7 +54,7 @@ async def shoot() -> None:
             await pilot.pause(0.35)                      # let the mic meter tick
             (OUT / f"{name}.svg").write_text(fix_wide_chars(app.export_screenshot()), encoding="utf-8")
 
-        first, second = DEMO
+        first, second, switch, esther = DEMO
         await snap("01_listening", "listening", 40)
         await snap("02_hearing", "hearing", 1350)
         app._apply("you", first["you"])
@@ -67,6 +67,14 @@ async def shoot() -> None:
         app._apply("claude", second["claude"])
         await snap("05_mandarin", "speaking", 300)
         await snap("06_asleep", "asleep", 25)
+        # more than one brain: "talk to Esther" switches the thread; the label follows
+        app._apply("you", switch["you"])
+        app._apply("claude", switch["claude"])
+        if app.engine.brain.resolve("esther"):
+            app.engine.brain.set_target(app.engine.brain.resolve("esther"))
+        app._apply("you", esther["you"])
+        app._apply("claude", esther["claude"])
+        await snap("07_brains", "speaking", 320)
 
 
 if __name__ == "__main__":

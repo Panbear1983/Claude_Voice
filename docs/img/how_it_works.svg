@@ -34,9 +34,10 @@
 
   <!-- Claude, shared by both rows -->
   <rect x="580" y="66" width="164" height="270" rx="12" fill="#1f1a14" stroke="#f39c12" stroke-width="2"/>
-  <text class="t" x="662" y="168" style="font-size:17px">Claude Code</text>
-  <text class="s" x="662" y="192">one shared</text>
-  <text class="s" x="662" y="208">conversation</text>
+  <text class="t" x="662" y="168" style="font-size:17px">The brain</text>
+  <text class="s" x="662" y="192">Claude · Gemini · Hermes</text>
+  <text class="s" x="662" y="208">one thread each</text>
+  <text class="s" x="662" y="224">"talk to Esther" switches</text>
   <text class="s" x="662" y="240">reads files</text>
   <text class="s" x="662" y="256">runs commands</text>
   <text class="s" x="662" y="272">searches the web</text>
@@ -45,7 +46,7 @@
   <!-- iPhone row -->
   <text class="lab" x="30" y="232">FROM THE iPHONE</text>
   <rect class="box" x="30" y="246" width="150" height="70" rx="10" stroke="#2ecc71"/>
-  <text class="t" x="105" y="276">"Hey Siri,</text><text class="s" x="105" y="296">Talk to Claude"</text>
+  <text class="t" x="105" y="276">"Hey Siri,</text><text class="s" x="105" y="296">Talk to Esther"</text>
   <rect class="box" x="210" y="246" width="150" height="70" rx="10"/>
   <text class="t" x="285" y="276">Tailscale</text><text class="s" x="285" y="296">private link, anywhere</text>
   <rect class="box" x="390" y="246" width="150" height="70" rx="10"/>
@@ -56,5 +57,5 @@
   <path class="ln" d="M662,336 V370 H105 V320"/>
   <text class="s" x="384" y="388">the iPhone reads the reply aloud and listens again</text>
 
-  <text class="note" x="480" y="428">On the Mac, speech becomes text locally. Only the text goes to Claude.</text>
+  <text class="note" x="480" y="428">On the Mac, speech becomes text locally. Only the text goes to the brain you chose.</text>
 </svg>
