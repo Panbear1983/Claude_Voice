@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -55,16 +56,48 @@ class Brain:
         self.session_id = None
 
     # -- one turn --------------------------------------------------------------------------
+    # -- model switching by voice ("use Opus", "switch to Sonnet", "which model") ------------
+    MODELS = {
+        "fable": "claude-fable-5-1", "opus": "claude-opus-5-5",
+        "sonnet": "claude-sonnet-5-5", "haiku": "claude-haiku-5-5",
+    }
+
+    def model(self) -> str:
+        try:
+            return S.MODEL_FILE.read_text().strip() or S.DEFAULT_MODEL
+        except OSError:
+            return S.DEFAULT_MODEL
+
+    def _model_command(self, text: str) -> Optional[str]:
+        norm = re.sub(r"[^\w\s]", "", text.lower())
+        if re.search(r"\b(which|what) model\b", norm):
+            return f"I am using {self._model_name(self.model())}."
+        m = re.search(r"\b(use|switch to|change to|swap to)\s+(the\s+)?(fable|opus|sonnet|haiku)\b", norm)
+        if not m:
+            return None
+        chosen = self.MODELS[m.group(3)]
+        S.MODEL_FILE.write_text(chosen)
+        return f"Okay, switching to {self._model_name(chosen)} from the next question on."
+
+    @staticmethod
+    def _model_name(model_id: str) -> str:
+        return model_id.replace("claude-", "").replace("-", " ").title()
+
     def ask(self, text: str, on_status: StatusCb = lambda s: None,
             on_text: Callable[[str], None] = lambda s: None) -> str:
         """Send text, return Claude's final reply. on_status gets a short spoken-status
         phrase every STATUS_EVERY_SEC while Claude works."""
+        handled = self._model_command(text)
+        if handled:
+            self._log(text, handled)
+            return handled
         with open(S.TURN_LOCK_FILE, "w") as lockf:
             fcntl.flock(lockf, fcntl.LOCK_EX)          # phone and window take turns
             return self._ask_locked(text, on_status, on_text)
 
     def _ask_locked(self, text: str, on_status: StatusCb, on_text: Callable[[str], None]) -> str:
         cmd = [S.CLAUDE_BIN, "-p", text, "--output-format", "stream-json", "--verbose",
+               "--model", self.model(),
                "--permission-mode", "bypassPermissions",
                "--append-system-prompt", S.VOICE_SYSTEM_PROMPT]
         if self.session_id:

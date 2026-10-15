@@ -72,6 +72,8 @@ CLAUDE_BIN = os.environ.get("CLAUDE_VOICE_CLAUDE_BIN", "claude")
 CLAUDE_CWD = HOME               # the thread runs in Peter's home, so every repo is reachable
 CLAUDE_TURN_TIMEOUT_SEC = 600
 SESSION_FILE = STATE_DIR / "session_id"          # one thread shared by the Mac window and the phone
+DEFAULT_MODEL = "claude-fable-5-1"
+MODEL_FILE = STATE_DIR / "model"                 # set by voice: "use Opus", "switch to Sonnet", "which model"
 TURN_LOCK_FILE = STATE_DIR / "turn.lock"
 TRANSCRIPT_LOG = STATE_DIR / "transcript.log"
 
