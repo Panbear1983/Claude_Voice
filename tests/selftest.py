@@ -1,0 +1,151 @@
+"""Headless self-test: proves every stage without a microphone or a screen.
+
+  .venv/bin/python tests/selftest.py            # all stages
+  .venv/bin/python tests/selftest.py --no-brain # skip the Claude turn (no tokens spent)
+
+Stages: 1 silence detector on synthetic audio, 2 whisper-server transcription of a spoken
+clip, 3 English + Mandarin voices, 4 two Claude turns on one thread (memory check),
+5 the window mounts headlessly with the loop stubbed out.
+"""
+from __future__ import annotations
+
+import asyncio
+import os
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+os.environ.setdefault("CLAUDE_VOICE_STATE", tempfile.mkdtemp(prefix="cv-state-"))
+
+import settings as S  # noqa: E402
+import stt  # noqa: E402
+import tts  # noqa: E402
+from audio import Microphone, write_wav  # noqa: E402
+
+ok = True
+
+
+def report(name: str, passed: bool, detail: str = "") -> None:
+    global ok
+    ok &= passed
+    print(f"[{'PASS' if passed else 'FAIL'}] {name} {detail}")
+
+
+# 1 ---------------------------------------------------------------------------------------------
+def stage_vad() -> None:
+    mic = Microphone()
+    rng = np.random.default_rng(0)
+    quiet = lambda n: (rng.normal(0, 60, n * S.BLOCK)).astype(np.int16)        # noise floor ~60
+    loud = lambda n: (rng.normal(0, 2500, n * S.BLOCK)).astype(np.int16)       # speech ~2500
+    stream = np.concatenate([quiet(40), loud(60), quiet(70)])                  # 1.2 s quiet, 1.8 s talk, 2.1 s quiet
+    blocks = [stream[i:i + S.BLOCK] for i in range(0, len(stream), S.BLOCK)]
+
+    def feed() -> None:                       # arrive like a live mic (listen() drains on entry)
+        time.sleep(0.2)
+        for b in blocks:
+            mic._on_audio(b.reshape(-1, 1), len(b), None, None)
+            time.sleep(0.002)
+
+    import threading
+    threading.Thread(target=feed, daemon=True).start()
+    t0 = time.monotonic()
+    audio = mic.listen(timeout_sec=5)
+    dur = audio.size / S.SAMPLE_RATE if audio is not None else 0
+    report("silence detector", audio is not None and 2.2 <= dur <= 4.2,
+           f"captured {dur:.1f}s (talk 1.8s + pre-roll + 1.5s pause) in {time.monotonic()-t0:.1f}s")
+    # nothing said -> None after timeout
+    mic2 = Microphone()
+    for _ in range(40):
+        mic2._on_audio(quiet(1).reshape(-1, 1), S.BLOCK, None, None)
+    report("silence -> no utterance", mic2.listen(timeout_sec=0.5) is None)
+
+
+# 2 ---------------------------------------------------------------------------------------------
+def stage_stt(w: stt.Whisper) -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="cv-stt-"))
+    phrase = "What is the weather like in Taipei today, and should I bring an umbrella?"
+    subprocess.run(["/usr/bin/say", "-v", "Samantha", "-o", str(tmp / "a.aiff"), phrase], check=True)
+    subprocess.run([S.FFMPEG, "-loglevel", "error", "-y", "-i", str(tmp / "a.aiff"), "-ar", "16000", "-ac", "1",
+                    str(tmp / "a.wav")], check=True)
+    t0 = time.monotonic()
+    text = w.transcribe(tmp / "a.wav")
+    report("whisper transcription", "umbrella" in text.lower() and "taipei" in text.lower(),
+           f"{time.monotonic()-t0:.1f}s -> {text!r}")
+    report("hallucination filter", stt.clean("[BLANK_AUDIO]") == "" and stt.clean("Thank you.") == "")
+    report("command normalize", stt.normalize("Go to sleep.") == "go to sleep")
+
+
+# 3 ---------------------------------------------------------------------------------------------
+def stage_tts() -> None:
+    t0 = time.monotonic()
+    p = tts.synthesize("Your daily trading report is working again.")
+    report("english voice", p is not None and p.stat().st_size > 1000, f"{time.monotonic()-t0:.1f}s {p}")
+    t0 = time.monotonic()
+    p = tts.synthesize("早安，今天的報告已經送出了。")
+    report("mandarin voice (Meijia)", p is not None and p.stat().st_size > 1000, f"{time.monotonic()-t0:.1f}s")
+    report("speakable strips markdown",
+           tts.speakable("**Done.** See `foo.py` and https://x.y/z\n```\ncode\n```") ==
+           "Done. See foo.py and a link the code is in the window.")
+
+
+# 4 ---------------------------------------------------------------------------------------------
+def stage_brain() -> None:
+    from brain import Brain
+    b = Brain()
+    b.new_thread()
+    statuses: list[str] = []
+    t0 = time.monotonic()
+    r1 = b.ask("Remember the code word is pineapple. Reply with just: noted.", on_status=statuses.append)
+    t1 = time.monotonic() - t0
+    r2 = b.ask("What was the code word? One word.")
+    report("claude turn 1", bool(r1) and not r1.startswith("I did not get an answer"), f"{t1:.1f}s -> {r1!r}")
+    report("claude thread remembers", "pineapple" in r2.lower(), f"-> {r2!r}")
+    report("session id saved", S.SESSION_FILE.exists() and len(S.SESSION_FILE.read_text()) > 10)
+
+
+# 5 ---------------------------------------------------------------------------------------------
+def stage_window() -> None:
+    import engine
+    engine.Engine.start = lambda self: None          # no mic, no whisper in the test
+    from app import ClaudeVoice
+
+    async def run() -> tuple[str, bool]:
+        app = ClaudeVoice()
+        async with app.run_test(size=(100, 24)) as pilot:
+            await pilot.pause()
+            app._apply("state", "listening")
+            app._apply("you", "hello there")
+            app._apply("claude", "Hi Peter.")
+            await pilot.pause()
+            from textual.widgets import Static
+            light = str(app.query_one("#light", Static).render())
+            await pilot.press("m")
+            await pilot.pause()
+            mode = str(app.query_one("#mode", Static).render())
+            return light, "tap" in mode
+
+    light, tapped = asyncio.run(run())
+    report("window mounts + light", "listening" in light, light)
+    report("M switches mode", tapped)
+
+
+if __name__ == "__main__":
+    stage_vad()
+    w = stt.Whisper()
+    w.start()
+    try:
+        stage_stt(w)
+    finally:
+        w.stop()
+    stage_tts()
+    if "--no-brain" not in sys.argv:
+        stage_brain()
+    stage_window()
+    print("ALL PASS" if ok else "SOME FAILED")
+    sys.exit(0 if ok else 1)
