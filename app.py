@@ -64,6 +64,15 @@ class ClaudeVoice(App):
         log.write("[dim]Just talk. A pause of a second and a half sends. Say \"stop\" to cut me off, "
                   "\"go to sleep\" to pause, \"goodbye\" to end.[/dim]")
         self.engine.start()
+        self.set_interval(0.2, self._meter)
+
+    def _meter(self) -> None:
+        """Live microphone level under the mode label, so a silent mic is visible at once."""
+        level = self.engine.mic.level
+        bars = min(10, int(level / 150))
+        meter = "▮" * bars + "▯" * (10 - bars)
+        mode = "open mic" if self.engine.mode == "open" else "tap to talk"
+        self.query_one("#mode", Static).update(f"{mode}\nmic {meter} {int(level)}")
 
     # -- events from the loop thread ---------------------------------------------------------------
     def _event(self, kind: str, text: str) -> None:
