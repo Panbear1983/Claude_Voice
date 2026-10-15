@@ -68,8 +68,31 @@ class Brain:
         except OSError:
             return S.DEFAULT_MODEL
 
+    # -- effort by voice: three presets ("quick", "normal", "deep") + "max" ------------------
+    EFFORTS = {
+        "quick": "low", "fast": "low", "low": "low",
+        "normal": "medium", "medium": "medium",
+        "deep": "high", "high": "high", "harder": "high", "careful": "high",
+        "max": "max", "maximum": "max",
+    }
+    EFFORT_WORDS = {"low": "quick", "medium": "normal", "high": "deep", "xhigh": "deep", "max": "max"}
+
+    def effort(self) -> str:
+        try:
+            return S.EFFORT_FILE.read_text().strip() or S.DEFAULT_EFFORT
+        except OSError:
+            return S.DEFAULT_EFFORT
+
     def _model_command(self, text: str) -> Optional[str]:
         norm = re.sub(r"[^\w\s]", "", text.lower())
+        if re.search(r"\b(which|what) (effort|mode)\b", norm):
+            return f"Effort is {self.EFFORT_WORDS.get(self.effort(), self.effort())}."
+        m = re.search(r"\b(think|effort|mode)\b.*\b(quick|fast|low|normal|medium|deep|high|harder|careful|max|maximum)\b", norm) \
+            or re.search(r"\b(quick|fast|normal|deep|careful|max|maximum)\s+(mode|answers|thinking|effort)\b", norm)
+        if m:
+            level = self.EFFORTS[m.group(2) if m.re.pattern.startswith(r"\b(think") else m.group(1)]
+            S.EFFORT_FILE.write_text(level)
+            return f"Okay, {self.EFFORT_WORDS[level]} effort from the next question on."
         if re.search(r"\b(which|what) model\b", norm):
             return f"I am using {self._model_name(self.model())}."
         m = re.search(r"\b(use|switch to|change to|swap to)\s+(the\s+)?(fable|opus|sonnet|haiku)\b", norm)
@@ -97,7 +120,7 @@ class Brain:
 
     def _ask_locked(self, text: str, on_status: StatusCb, on_text: Callable[[str], None]) -> str:
         cmd = [S.CLAUDE_BIN, "-p", text, "--output-format", "stream-json", "--verbose",
-               "--model", self.model(),
+               "--model", self.model(), "--effort", self.effort(),
                "--permission-mode", "bypassPermissions",
                "--append-system-prompt", S.VOICE_SYSTEM_PROMPT]
         if self.session_id:
