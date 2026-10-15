@@ -32,7 +32,7 @@ BARGE_IN_SEC = 0.5
 
 # ---- sleep / wake --------------------------------------------------------------------
 SLEEP_AFTER_SEC = 60            # no speech for this long -> grey light, wake word needed
-WAKE_WORDS = ("hey claude", "hey, claude", "claude", "克勞德", "克劳德")
+WAKE_WORDS = ("hey claude", "hey, claude", "claude", "hey hermes", "hey, hermes", "克勞德", "克劳德")
 
 # ---- spoken commands (matched after lowercasing and stripping punctuation) ------------
 STOP_WORDS = {"stop", "wait", "hold on", "stop talking", "shut up", "quiet", "等一下", "停"}
@@ -88,6 +88,20 @@ Reply the way you would speak on the phone: plain spoken English (answer in Mand
 No markdown, no bullet lists, no headings, no code blocks, no file paths, no URLs, no emojis, nothing that cannot be read aloud.
 If the real answer needs code or long detail, do the work, write the detail to the file ~/.claude_voice/detail.md, and say in one sentence that the detail is in the window.
 Do not ask more than one question at a time. Never end with a summary of what you just said."""
+
+# ---- the other brains: Hermes profiles --------------------------------------------------
+# Every Hermes profile on this Mac is its own separate thread. Say "talk to Esther" /
+# "talk to Claude" to switch; each phone Shortcut is pinned to one of them.
+HERMES_BIN = os.environ.get("CLAUDE_VOICE_HERMES_BIN", str(HOME / ".local/bin/hermes"))
+HERMES_PROFILES_DIR = Path(os.environ.get("HERMES_PROFILES_DIR", HOME / ".hermes/profiles"))
+HERMES_SKIP_PROFILES = {"default"}                # lives at ~/.hermes itself and has no session store
+HERMES_DISPLAY_NAMES = {"tax_angel_esther": "Esther"}   # spoken names; everything else is the profile name in words
+HERMES_TURN_TIMEOUT_SEC = 600
+HERMES_SESSION_DIR = STATE_DIR / "hermes_sessions"      # one session id per profile
+BRAIN_FILE = STATE_DIR / "brain"                        # "claude" or "hermes:<profile>", set by voice: "talk to Esther"
+HERMES_VOICE_NOTE = (f"(Voice call with {USER_NAME}: they hear you and are not reading a screen. Answer the way you "
+                     "would speak on the phone, one to four short sentences, in Mandarin if they spoke Mandarin, "
+                     "lead with the outcome. No markdown, lists, code, file paths, URLs or emojis.)")
 
 # ---- phone receiver ------------------------------------------------------------------
 RECEIVER_HOST = os.environ.get("CLAUDE_VOICE_RECEIVER_HOST", "0.0.0.0")   # Tailscale + LAN; token-protected

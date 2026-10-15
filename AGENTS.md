@@ -7,6 +7,10 @@ What this is: a hands-free voice loop with Claude Code on Peter's Mac. Mic open 
 1.5 s sends -> whisper-server (small model, kept loaded) -> `claude -p --resume` headless thread
 -> spoken reply via Hermes' voice chain (Jenny -> Piper -> Mac voice; Meijia for Mandarin) ->
 mic reopens. Window = `app.py` (Textual 7.5). Phone door = `receiver.py` + an iOS Shortcut.
+Since 2026-10-15 evening `brain.Brain` is a router: "claude" (ClaudeBrain, `claude -p --resume`) or
+"hermes:<profile>" (HermesBrain, `hermes -p <profile> -z … --resume <id>` with HERMES_HOME set; the new
+session id is read from the profile's state.db because one-shot prints none). Sticky target in
+`~/.claude_voice/brain` ("talk to Esther"); the phone passes `to` per request, one Shortcut per brain.
 
 Standing rules:
 - Peter never types in the window and never presses record or play. Keep it that way.

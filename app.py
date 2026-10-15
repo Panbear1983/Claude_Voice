@@ -72,7 +72,7 @@ class ClaudeVoice(App):
         bars = min(10, int(level / 150))
         meter = "▮" * bars + "▯" * (10 - bars)
         mode = "open mic" if self.engine.mode == "open" else "tap to talk"
-        self.query_one("#mode", Static).update(f"{mode}\nmic {meter} {int(level)}")
+        self.query_one("#mode", Static).update(f"{mode} · {self.engine.brain.name()}\nmic {meter} {int(level)}")
 
     # -- events from the loop thread ---------------------------------------------------------------
     def _event(self, kind: str, text: str) -> None:
@@ -94,7 +94,7 @@ class ClaudeVoice(App):
         elif kind == "you":
             log.write(f"[bold #2ecc71]You:[/] {text}")
         elif kind == "claude":
-            log.write(f"[bold #3498db]Claude:[/] {text}\n")
+            log.write(f"[bold #3498db]{self.engine.brain.name()}:[/] {text}\n")
         elif kind == "progress":
             log.write(f"[dim]{text}[/dim]")
         elif kind == "status":
@@ -122,7 +122,7 @@ class ClaudeVoice(App):
 
     def action_new_thread(self) -> None:
         self.engine.brain.new_thread()
-        self._apply("note", "new conversation thread; I forget what we said before")
+        self._apply("note", f"new conversation thread with {self.engine.brain.name()}; it forgets what we said before")
 
     def action_quit_app(self) -> None:
         self.engine.quit()

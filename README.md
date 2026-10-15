@@ -45,6 +45,8 @@ desk, the same conversation continues on your iPhone through Siri.
 - **Bilingual.** Speak English or Mandarin, and get the answer back in the same language.
 - **No API key.** It uses the `claude` command you're already logged into, on your normal subscription.
 - **Change things by voice.** "Use Opus", "think deep", "go to sleep", "goodbye".
+- **More than one brain.** Run [Hermes](https://github.com/NousResearch/hermes-agent) profiles too? Say
+  "talk to Esther" and the same window and phone door carry on with that profile's own thread.
 
 ---
 
@@ -130,6 +132,8 @@ The first time it opens, macOS asks whether Terminal may use the microphone. Cli
 | "which model" | tells you which model it's using |
 | "think deep" / "quick mode" / "max effort" / "normal mode" | how hard Claude thinks |
 | "which effort" | tells you the current effort level |
+| "talk to Esther" / "talk to the orchestrator" / "talk to Claude" | switches to another brain: every [Hermes](https://github.com/NousResearch/hermes-agent) profile on the Mac is its own separate conversation |
+| "who am I talking to" / "who can I talk to" | which brain is on, and the list |
 | "open mic" / "tap to talk" | switches listening mode (tap mode is for noisy rooms) |
 | "goodbye", 「再見」 | ends the session; Claude saves a short note about what you discussed |
 
@@ -160,6 +164,24 @@ re-add it whenever you change the receiver.
 
 Prefer typing on the phone? `./install_remote_control.sh` keeps a Claude Code Remote
 Control session running on the Mac, so the Claude app on your phone always finds it.
+
+## More than one brain
+
+If [Hermes Agent](https://github.com/NousResearch/hermes-agent) is installed, every profile
+under `~/.hermes/profiles` is a separate thread you can talk to, with its own memory of
+what you said. Nothing to configure: the profiles are found at start.
+
+- **In the window:** "talk to Esther", "talk to the orchestrator", "talk to Claude". Any
+  word of the profile's name works (`tax_angel_esther` answers to "Esther"). The label in the
+  corner and in the transcript shows who is on. <kbd>N</kbd> starts a fresh thread with
+  whoever that is.
+- **From the phone:** one Shortcut per brain, pinned to it, so the wake phrase picks the
+  thread: `make_shortcut.py --to esther` builds "Talk to Esther", `--all` builds one for
+  every brain. "Hey Siri, Talk to Esther" and "Hey Siri, Talk to Claude" never mix.
+
+Each Hermes turn runs that profile headlessly (`hermes -p <profile> -z … --resume <id>`),
+in its own home, with its own model, tools and memory. The session id is kept per profile in
+`~/.claude_voice/hermes_sessions/`. Spoken names can be overridden in `HERMES_DISPLAY_NAMES`.
 
 ## Make it yours
 

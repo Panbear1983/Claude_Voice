@@ -6,7 +6,8 @@
 Stages: 1 silence detector on synthetic audio, 2 whisper-server transcription of a spoken
 clip, 3 English + Mandarin voices, 4 two Claude turns on one thread (memory check),
 5 the phone receiver's check-back polling with a stand-in brain, 6 the window mounts
-headlessly with the loop stubbed out.
+headlessly with the loop stubbed out, 7 the brain router ("talk to Esther", one thread
+per Hermes profile) without spending a token, 8 (--hermes) two live Hermes turns.
 """
 from __future__ import annotations
 
@@ -147,7 +148,53 @@ def stage_receiver() -> None:
         report("receiver: rejects a missing token", False)
     except urllib.error.HTTPError as exc:
         report("receiver: rejects a missing token", exc.code == 403)
+    # the phone can pin a request to one thread; an unknown name is answered, not queued
+    seen = {}
+    receiver.brain.ask = lambda text, to=None, **kw: (seen.setdefault("to", to), f"from {to}")[1]
+    pinned, _ = call("POST", "/ask", {"text": "q", "to": "claude"})
+    report("receiver: 'to' pins the thread", seen.get("to") == "claude" and pinned == "from claude", str((seen, pinned)))
+    bogus, _ = call("POST", "/ask", {"text": "q", "to": "nobody-here"})
+    report("receiver: unknown 'to' is answered at once", bogus.startswith("I do not know anyone"), bogus)
     srv.shutdown()
+
+
+# 7 ---------------------------------------------------------------------------------------------
+def stage_router() -> None:
+    """The front door picks the thread by spoken name; Hermes profiles are discovered from disk."""
+    import brain as B
+    profiles = B.hermes_profiles()
+    b = B.Brain()
+    report("router: Claude is always a target", b.targets()[0] == "claude" and b.target() == "claude")
+    report("router: Hermes profiles found", bool(profiles), str(profiles))
+    if profiles:
+        p = profiles[0]
+        word = [w for w in p.replace("-", "_").split("_") if w][-1]
+        report("router: any word of the profile name resolves", b.resolve(word) == f"hermes:{p}", f"{word!r} -> {b.resolve(word)}")
+        said = b.command(f"talk to {word}")
+        report("router: 'talk to X' switches the sticky thread", b.target() == f"hermes:{p}" and said.startswith("Okay"), str(said))
+        report("router: Hermes backend runs in the profile's home", b.backend().home == S.HERMES_PROFILES_DIR / p)
+    report("router: 'switch to Opus' is left to the model switch", b.command("switch to Opus") is None)
+    report("router: a sentence is not a switch", b.command("talk to me about the budget") is None)
+    report("router: 'talk to Claude' goes back", b.command("talk to Claude") == "Okay, back to Claude." and b.target() == "claude")
+    report("router: who am I talking to", b.command("who am I talking to") == "You are talking to Claude.")
+
+
+# 8 ---------------------------------------------------------------------------------------------
+def stage_hermes() -> None:
+    """Two live turns with the first Hermes profile: the second must remember the first."""
+    import brain as B
+    profiles = B.hermes_profiles()
+    if not profiles:
+        report("hermes: no profile to test", False)
+        return
+    b = B.Brain()
+    to = f"hermes:{profiles[0]}"
+    t0 = time.monotonic()
+    first = b.ask("Remember that the code word is lantern. Reply in one short sentence.", to=to)
+    sid = b.backend(to).session_id
+    report("hermes: first turn answered + session id found", bool(first) and bool(sid), f"{time.monotonic()-t0:.0f}s {sid} {first[:60]!r}")
+    second = b.ask("What is the code word? Answer in three words or fewer.", to=to)
+    report("hermes: second turn remembers the first", "lantern" in second.lower(), second[:80])
 
 
 # 6 ---------------------------------------------------------------------------------------------
@@ -189,5 +236,8 @@ if __name__ == "__main__":
         stage_brain()
     stage_receiver()
     stage_window()
+    stage_router()
+    if "--hermes" in sys.argv:
+        stage_hermes()
     print("ALL PASS" if ok else "SOME FAILED")
     sys.exit(0 if ok else 1)

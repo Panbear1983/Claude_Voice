@@ -3,13 +3,15 @@
 Siri gives up on any single request that takes much longer than ten seconds, and a
 Claude turn can take 20 s or more, so the phone never waits for a whole turn:
 
-POST /ask   {"text": "..."}  -> {"reply": "...", "pending": bool}
-                                the answer if it was ready within ASK_WAIT_SEC, else "."
+POST /ask   {"text": "...", "to": "esther"}  -> {"reply": "...", "pending": bool}
+                                the answer if it was ready within ASK_WAIT_SEC, else ".".
+                                "to" (optional) picks the thread: "claude" or a Hermes
+                                profile by name; each phone Shortcut is pinned to one.
 GET  /reply                  -> {"reply": "..."}
                                 the next finished answer (waits up to POLL_WAIT_SEC for one);
                                 "." when there is nothing to say, a short "still working"
                                 line every few polls while Claude is busy
-GET  /health                 -> {"ok": true}
+GET  /health                 -> {"ok": true, "targets": [...]}   who you can talk to
 
 Every request must carry the shared token (header X-Token or JSON field "token").
 Each answer is handed out exactly once, so the Shortcut can poll on a fixed schedule and
@@ -62,8 +64,8 @@ TOKEN = token()
 
 
 # -- jobs ---------------------------------------------------------------------------------
-def start_job(text: str) -> dict:
-    job = {"id": uuid.uuid4().hex[:8], "text": text, "reply": "", "done": False,
+def start_job(text: str, to: str = "") -> dict:
+    job = {"id": uuid.uuid4().hex[:8], "text": text, "to": to, "reply": "", "done": False,
            "consumed": False, "started": time.monotonic(), "polls": 0}
     with _cv:
         _prune()
@@ -74,7 +76,7 @@ def start_job(text: str) -> dict:
 
 def _run(job: dict) -> None:
     try:
-        reply = brain.ask(job["text"])
+        reply = brain.ask(job["text"], to=job["to"] or None)
     except Exception as exc:                       # the phone should hear it, not silence
         reply = f"I hit an error: {exc}"
     with _cv:
@@ -133,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         t0 = time.monotonic()
         if path == "/health":
-            self._send(200, {"ok": True})
+            self._send(200, {"ok": True, "targets": brain.targets()})
             return
         if path != "/reply":
             self._send(404, {"error": "not found"})
@@ -166,9 +168,14 @@ class Handler(BaseHTTPRequestHandler):
         if not text:
             self._send(400, {"error": "empty"})
             return
+        to = (data.get("to") or "").strip()
+        if to and not brain.resolve(to):
+            self._send(200, {"reply": f"I do not know anyone called {to}.", "pending": False})
+            log(f"{self.client_address[0]} POST /ask unknown target {to!r}")
+            return
         t0 = time.monotonic()
-        job = start_job(text)
-        log(f"{self.client_address[0]} POST /ask job {job['id']}: {text[:80]!r}")
+        job = start_job(text, to)
+        log(f"{self.client_address[0]} POST /ask job {job['id']} -> {brain.name(to or None)}: {text[:80]!r}")
         reply, is_answer = take_reply(ASK_WAIT_SEC)
         sent = self._send(200, {"reply": reply, "pending": not is_answer, "job": job["id"]})
         log(f"{self.client_address[0]} POST /ask job {job['id']} {time.monotonic()-t0:.1f}s "

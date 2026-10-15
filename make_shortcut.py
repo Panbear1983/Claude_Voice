@@ -1,13 +1,17 @@
-"""Build the iPhone side: a signed "Talk to Claude" Shortcut file.
+"""Build the iPhone side: signed "Talk to ..." Shortcut files, one per thread.
 
 The shortcut loops: dictate (stops on a pause) -> POST to the Mac receiver -> speak what
 came back -> check back every ~8 s and speak the answer when it is ready -> repeat. Open the produced file once on the Mac (Shortcuts asks "Add Shortcut");
 iCloud then syncs it to the iPhone.
 
-  .venv/bin/python make_shortcut.py            # writes 'Talk to Claude.shortcut' here + ~/Desktop/Misc
+  .venv/bin/python make_shortcut.py                      # 'Talk to Claude.shortcut' here + ~/Desktop/Misc
+  .venv/bin/python make_shortcut.py --to esther          # 'Talk to Esther.shortcut', pinned to that Hermes profile
+  .venv/bin/python make_shortcut.py --all                # one file per thread (Claude + every Hermes profile)
+  .venv/bin/python make_shortcut.py --to orchestrator --name "Talk to the Boss"
 """
 from __future__ import annotations
 
+import argparse
 import os
 import plistlib
 import shutil
@@ -17,6 +21,7 @@ import uuid
 from pathlib import Path
 
 import settings as S
+from brain import Brain
 
 REPEATS = 300          # one tap gives up to 300 exchanges
 TAILSCALE = shutil.which("tailscale") or "/opt/homebrew/bin/tailscale"
@@ -75,8 +80,9 @@ def speak_reply(url_uuid: str) -> list[dict]:
     ]
 
 
-def build() -> dict:
+def build(to: str = "") -> dict:
     """One round = dictate -> POST /ask -> speak -> (GET /reply -> speak) x POLLS.
+    `to` pins every request to one thread ("claude" or "hermes:<profile>").
 
     Siri drops any single request that takes much longer than ten seconds, so the Mac
     answers /ask at once and the phone checks back; every check-back speaks whatever came
@@ -89,7 +95,7 @@ def build() -> dict:
          "WFWorkflowActionParameters": {"GroupingIdentifier": group, "WFControlFlowMode": 0, "WFRepeatCount": REPEATS}},
         {"WFWorkflowActionIdentifier": "is.workflow.actions.dictatetext",
          "WFWorkflowActionParameters": {"UUID": dictate_uuid, "WFDictateTextStopListening": "After Pause"}},
-        url_action(ask_uuid, "POST", {"text": ref(dictate_uuid, "Dictated Text")}),
+        url_action(ask_uuid, "POST", {"text": ref(dictate_uuid, "Dictated Text"), **({"to": text(to)} if to else {})}),
         *speak_reply(ask_uuid),
     ]
     for _ in range(POLLS):
@@ -112,12 +118,12 @@ def build() -> dict:
     }
 
 
-def main() -> None:
+def make(name: str, to: str) -> Path:
     here = Path(__file__).resolve().parent
-    raw = here / "Talk to Claude.unsigned.shortcut"
-    signed = here / "Talk to Claude.shortcut"
+    raw = here / f"{name}.unsigned.shortcut"
+    signed = here / f"{name}.shortcut"
     with open(raw, "wb") as fh:
-        plistlib.dump(build(), fh)
+        plistlib.dump(build(to), fh)
     r = subprocess.run(["/usr/bin/shortcuts", "sign", "--mode", "anyone", "--input", str(raw), "--output", str(signed)],
                        capture_output=True, text=True)
     raw.unlink(missing_ok=True)
@@ -127,7 +133,25 @@ def main() -> None:
     misc = Path.home() / "Desktop/Misc"
     if misc.is_dir():
         shutil.copy(signed, misc / signed.name)
-    print(f"built {signed}  (receiver {URL_ASK}, {POLLS} check-backs per question)")
+    print(f"built {signed}  -> {to or 'claude'}  (receiver {URL_ASK}, {POLLS} check-backs per question)")
+    return signed
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Build signed 'Talk to ...' Shortcuts for the iPhone.")
+    ap.add_argument("--to", default="", help="thread: 'claude' or a Hermes profile (name or hermes:<profile>)")
+    ap.add_argument("--name", default="", help="Shortcut name (what you say to Siri); default 'Talk to <name>'")
+    ap.add_argument("--all", action="store_true", help="one Shortcut per thread: Claude and every Hermes profile")
+    args = ap.parse_args()
+    brain = Brain()
+    if args.all:
+        for target in brain.targets():
+            make(f"Talk to {brain.name(target)}", "" if target == "claude" else target)
+        return
+    target = brain.resolve(args.to) if args.to else "claude"
+    if not target:
+        sys.exit(f"unknown thread {args.to!r}; choose from: " + ", ".join(brain.targets()))
+    make(args.name or f"Talk to {brain.name(target)}", "" if target == "claude" else target)
 
 
 if __name__ == "__main__":
