@@ -8,6 +8,7 @@ iCloud then syncs it to the iPhone.
 """
 from __future__ import annotations
 
+import os
 import plistlib
 import shutil
 import subprocess
@@ -18,7 +19,11 @@ from pathlib import Path
 import settings as S
 
 REPEATS = 300          # one tap gives up to 300 exchanges
-TAILSCALE_IP = subprocess.run(["/opt/homebrew/bin/tailscale", "ip", "-4"], capture_output=True, text=True).stdout.strip() or "100.96.5.15"
+TAILSCALE = shutil.which("tailscale") or "/opt/homebrew/bin/tailscale"
+TAILSCALE_IP = os.environ.get("CLAUDE_VOICE_MAC_IP") or (
+    subprocess.run([TAILSCALE, "ip", "-4"], capture_output=True, text=True).stdout.strip().splitlines() or [""])[0]
+if not TAILSCALE_IP:
+    sys.exit("No Tailscale address found. Install Tailscale and sign in, or set CLAUDE_VOICE_MAC_IP.")
 URL = f"http://{TAILSCALE_IP}:{S.RECEIVER_PORT}/ask"
 TOKEN = S.RECEIVER_TOKEN_FILE.read_text().strip()
 

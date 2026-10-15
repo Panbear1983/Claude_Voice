@@ -1,0 +1,5 @@
+#!/bin/bash
+# Guardrail: block commits that contain secrets or personal-data files.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export STAGED_FILES="$(git diff --cached --name-only)"
+exec "$DIR/_scan.sh" git diff --cached
