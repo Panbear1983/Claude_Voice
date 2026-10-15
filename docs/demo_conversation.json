@@ -1,0 +1,14 @@
+[
+ {
+  "you": "How many lines of Python are in the Claude Voice project, and which file is the biggest?",
+  "progress": "I'll count the Python lines in your Claude Voice project now.",
+  "status": "still running a command",
+  "claude": "The Claude Voice project has about thirteen hundred lines of Python across ten files. The biggest is the engine file at a little over two hundred lines, with the brain file just behind it at two hundred."
+ },
+ {
+  "you": "台北現在幾點？",
+  "progress": "",
+  "status": "",
+  "claude": "台北現在是星期四下午四點四十五分。"
+ }
+]

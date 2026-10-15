@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 450" width="960" height="450" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/>
+    </marker>
+    <style>
+      .box { fill: #161b22; stroke: #30363d; stroke-width: 1.5; }
+      .t { fill: #e6edf3; font-size: 15px; font-weight: 600; text-anchor: middle; }
+      .s { fill: #8b949e; font-size: 12px; text-anchor: middle; }
+      .lab { fill: #8b949e; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; }
+      .ln { stroke: #8b949e; stroke-width: 1.6; fill: none; marker-end: url(#a); }
+      .note { fill: #8b949e; font-size: 12px; font-style: italic; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="960" height="450" rx="14" fill="#0d1117"/>
+
+  <!-- Mac row -->
+  <text class="lab" x="30" y="52">ON THE MAC</text>
+  <rect class="box" x="30" y="66" width="150" height="70" rx="10" stroke="#2ecc71"/>
+  <text class="t" x="105" y="96">You talk</text><text class="s" x="105" y="116">mic always open</text>
+  <rect class="box" x="210" y="66" width="150" height="70" rx="10"/>
+  <text class="t" x="285" y="96">Pause = send</text><text class="s" x="285" y="116">1.5 s of quiet</text>
+  <rect class="box" x="390" y="66" width="150" height="70" rx="10"/>
+  <text class="t" x="465" y="96">Speech to text</text><text class="s" x="465" y="116">whisper, on the Mac</text>
+  <rect class="box" x="780" y="66" width="150" height="70" rx="10" stroke="#3498db"/>
+  <text class="t" x="855" y="96">Spoken reply</text><text class="s" x="855" y="116">Piper · Meijia 中文</text>
+
+  <path class="ln" d="M180,101 H206"/>
+  <path class="ln" d="M360,101 H386"/>
+  <path class="ln" d="M540,101 H576"/>
+  <path class="ln" d="M744,101 H776"/>
+  <path class="ln" d="M855,136 V170 H105 V140"/>
+  <text class="s" x="385" y="188">the mic reopens · talk over a reply to interrupt</text>
+
+  <!-- Claude, shared by both rows -->
+  <rect x="580" y="66" width="164" height="270" rx="12" fill="#1f1a14" stroke="#f39c12" stroke-width="2"/>
+  <text class="t" x="662" y="168" style="font-size:17px">Claude Code</text>
+  <text class="s" x="662" y="192">one shared</text>
+  <text class="s" x="662" y="208">conversation</text>
+  <text class="s" x="662" y="240">reads files</text>
+  <text class="s" x="662" y="256">runs commands</text>
+  <text class="s" x="662" y="272">searches the web</text>
+  <text class="s" x="662" y="304" fill="#f39c12">"still running a command…"</text>
+
+  <!-- iPhone row -->
+  <text class="lab" x="30" y="232">FROM THE iPHONE</text>
+  <rect class="box" x="30" y="246" width="150" height="70" rx="10" stroke="#2ecc71"/>
+  <text class="t" x="105" y="276">"Hey Siri,</text><text class="s" x="105" y="296">Talk to Claude"</text>
+  <rect class="box" x="210" y="246" width="150" height="70" rx="10"/>
+  <text class="t" x="285" y="276">Tailscale</text><text class="s" x="285" y="296">private link, anywhere</text>
+  <rect class="box" x="390" y="246" width="150" height="70" rx="10"/>
+  <text class="t" x="465" y="276">Receiver</text><text class="s" x="465" y="296">token-protected</text>
+  <path class="ln" d="M180,281 H206"/>
+  <path class="ln" d="M360,281 H386"/>
+  <path class="ln" d="M540,281 H576"/>
+  <path class="ln" d="M662,336 V370 H105 V320"/>
+  <text class="s" x="384" y="388">the iPhone reads the reply aloud and listens again</text>
+
+  <text class="note" x="480" y="428">On the Mac, speech becomes text locally. Only the text goes to Claude.</text>
+</svg>
