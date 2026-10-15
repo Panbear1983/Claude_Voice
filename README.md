@@ -4,7 +4,20 @@
 
 **Talk to Claude Code like a phone call. Hands-free, on your Mac and your iPhone.**
 
-<img src="docs/img/loop.gif" alt="The Claude Voice window cycling through listening, hearing you, thinking and speaking" width="820">
+<table>
+<tr>
+<td width="40%" valign="middle">
+<img src="docs/img/iphone/siri_answer.jpg" alt="iPhone: Siri showing Claude's spoken answer — Yes, Claude is working. You are talking to it right now, and this answer came from the Mac to your phone the normal way." width="100%">
+</td>
+<td width="60%" valign="middle">
+<img src="docs/img/loop.gif" alt="The Claude Voice window on the Mac cycling through listening, hearing you, thinking and speaking" width="100%">
+</td>
+</tr>
+<tr>
+<td align="center"><sub><b>On the iPhone.</b> "Hey Siri, Talk to Claude", then a question. Eleven seconds later Siri reads out an answer that came from Claude Code running on the Mac.</sub></td>
+<td align="center"><sub><b>On the Mac.</b> The window: a coloured light, a live mic meter, and the transcript. Same conversation as the phone.</sub></td>
+</tr>
+</table>
 
 ![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon-111?logo=apple) ![Python](https://img.shields.io/badge/Python-3.11-3776ab?logo=python&logoColor=white) ![Claude Code](https://img.shields.io/badge/Claude%20Code-CLI-d97757) ![Speech](https://img.shields.io/badge/speech%20to%20text-on%20device-2ecc71) ![Languages](https://img.shields.io/badge/English%20%2B%20中文-supported-3498db)
 
@@ -17,7 +30,8 @@ button and no typing.
 This isn't a chatbot with a voice bolted on. It is **the real Claude Code**, with your
 files, your terminal and the web, driven by your voice. Ask it to count the lines in a
 project, check why a job failed, or look something up. While it works it tells you what
-it's doing ("still running a command"), so you're never left in silence.
+it's doing ("still running a command"), so you're never left in silence. Away from the
+desk, the same conversation continues on your iPhone through Siri.
 
 ## Why you'll like it
 
