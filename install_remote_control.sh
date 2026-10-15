@@ -20,7 +20,7 @@ cat > "$plist" <<PLIST
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>30</integer>
   <key>WorkingDirectory</key><string>$HOME</string>
-  <key>StandardOutPath</key><string>$HOME/.claude_voice/remote-control.log</string>
+  <key>StandardOutPath</key><string>/dev/null</string>
   <key>StandardErrorPath</key><string>$HOME/.claude_voice/remote-control.log</string>
   <key>EnvironmentVariables</key><dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$HOME/.local/bin</string>
